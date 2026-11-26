@@ -1,0 +1,1919 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#3b82f6">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="날씨 비서">
+    <link rel="manifest" href="./manifest.json">
+    <link rel="icon" type="image/svg+xml" href="./icon.svg">
+    <link rel="apple-touch-icon" href="./icon.svg">
+    <title>오늘의 날씨 비서</title>
+    <style>
+        :root {
+            --primary-color: #3b82f6;
+            --primary-hover: #2563eb;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-sub: #64748b;
+            --border-color: #e2e8f0;
+            --error-color: #ef4444;
+            --accent-bg: #eff6ff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 440px;
+            background-color: var(--card-bg);
+            border-radius: 24px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 18px 20px;
+            border-bottom: 1px solid var(--border-color);
+            gap: 8px;
+        }
+
+        .app-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--text-main);
+            white-space: nowrap;
+        }
+
+        .header-btns {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .action-btn {
+            background-color: var(--primary-color);
+            color: #ffffff;
+            border: none;
+            padding: 7px 12px;
+            border-radius: 18px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            white-space: nowrap;
+        }
+
+        .action-btn:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .action-btn.secondary {
+            background-color: #e2e8f0;
+            color: var(--text-main);
+        }
+
+        .action-btn.secondary:hover {
+            background-color: #cbd5e1;
+        }
+
+        .refresh-icon-btn {
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            line-height: 1;
+        }
+
+        .content {
+            padding: 20px;
+        }
+
+        .view-section {
+            display: none;
+        }
+
+        .view-section.active {
+            display: block;
+        }
+
+        .status-box {
+            text-align: center;
+            padding: 36px 16px;
+            color: var(--text-sub);
+            font-size: 0.92rem;
+            font-weight: 500;
+            line-height: 1.5;
+        }
+
+        .error-msg {
+            color: var(--error-color);
+            font-weight: 600;
+            background-color: #fef2f2;
+            border: 1px solid #fecaca;
+            padding: 16px;
+            border-radius: 12px;
+            text-align: center;
+            display: none;
+            margin-bottom: 16px;
+            font-size: 0.88rem;
+            line-height: 1.45;
+        }
+
+        .weather-card {
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            border-radius: 16px;
+            padding: 18px;
+            text-align: center;
+            margin-bottom: 14px;
+            border: 1px solid #bfdbfe;
+        }
+
+        .date-badge {
+            display: inline-block;
+            background-color: rgba(59, 130, 246, 0.12);
+            color: var(--primary-color);
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .main-temp {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 4px;
+        }
+
+        .weather-desc {
+            font-size: 0.96rem;
+            color: var(--text-sub);
+            font-weight: 600;
+        }
+
+        .hourly-section {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 12px 14px;
+            margin-bottom: 14px;
+        }
+
+        .hourly-title {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--text-sub);
+            margin-bottom: 10px;
+        }
+
+        .hourly-scroll {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+        }
+
+        .hourly-item {
+            flex: 0 0 64px;
+            background-color: #f8fafc;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            text-align: center;
+            padding: 8px 6px;
+        }
+
+        .hourly-time {
+            font-size: 0.74rem;
+            color: var(--text-sub);
+            margin-bottom: 4px;
+        }
+
+        .hourly-icon {
+            font-size: 1.05rem;
+            margin-bottom: 4px;
+        }
+
+        .hourly-temp {
+            font-size: 0.84rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .weather-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .weather-item {
+            background-color: var(--card-bg);
+            padding: 12px;
+            border-radius: 12px;
+            text-align: left;
+            border: 1px solid var(--border-color);
+        }
+
+        .weather-item .label {
+            font-size: 0.74rem;
+            color: var(--text-sub);
+            margin-bottom: 4px;
+        }
+
+        .weather-item .value {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--text-main);
+            line-height: 1.3;
+        }
+
+        .recommendation-container {
+            background-color: #f8fafc;
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 16px;
+        }
+
+        .rec-top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .rec-section-label {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--text-sub);
+        }
+
+        .tone-badge {
+            font-size: 0.74rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            background-color: var(--accent-bg);
+            border: 1px solid #bfdbfe;
+            padding: 3px 9px;
+            border-radius: 10px;
+        }
+
+        .rec-header-msg {
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 12px;
+            line-height: 1.45;
+            background-color: var(--accent-bg);
+            padding: 11px 12px;
+            border-radius: 10px;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .rec-box {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 12px 14px;
+            margin-bottom: 10px;
+        }
+
+        .rec-box:last-child {
+            margin-bottom: 0;
+        }
+
+        .rec-title {
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 8px;
+        }
+
+        .rec-list {
+            list-style: none;
+            padding-left: 4px;
+        }
+
+        .rec-list li {
+            font-size: 0.84rem;
+            color: var(--text-main);
+            margin-bottom: 5px;
+            line-height: 1.35;
+        }
+
+        .rec-list li:last-child {
+            margin-bottom: 0;
+        }
+
+        .rec-list li::before {
+            content: "• ";
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+
+        .weekly-title {
+            font-size: 1.02rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: var(--text-main);
+        }
+
+        .weekly-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .weekly-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 11px 14px;
+            background-color: #f8fafc;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            font-size: 0.86rem;
+        }
+
+        .weekly-item.today {
+            background-color: #eff6ff;
+            border-color: #bfdbfe;
+        }
+
+        .weekly-date {
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .weekly-weather-info {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .weekly-temps {
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .settings-card {
+            background-color: #f8fafc;
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 16px;
+        }
+
+        .settings-group {
+            margin-bottom: 16px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .settings-group:last-of-type {
+            border-bottom: none;
+            padding-bottom: 4px;
+        }
+
+        .settings-label-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .settings-label {
+            display: block;
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 8px;
+        }
+
+        .settings-label-row .settings-label {
+            margin-bottom: 0;
+        }
+
+        .required-badge {
+            font-size: 0.74rem;
+            font-weight: 700;
+            color: var(--error-color);
+        }
+
+        .email-sub-guide {
+            font-size: 0.75rem;
+            color: var(--text-sub);
+            margin-bottom: 8px;
+            line-height: 1.35;
+        }
+
+        .tone-options {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        .tone-btn {
+            padding: 9px 8px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            background-color: var(--card-bg);
+            color: var(--text-main);
+            font-size: 0.83rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .tone-btn.active {
+            background-color: var(--primary-color);
+            color: #ffffff;
+            border-color: var(--primary-color);
+        }
+
+        .tone-example {
+            margin-top: 8px;
+            font-size: 0.74rem;
+            color: #6b7280;
+            line-height: 1.4;
+            min-height: 20px;
+        }
+
+        .toggle-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: var(--card-bg);
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 8px;
+        }
+
+        .toggle-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .toggle-label-text {
+            font-size: 0.84rem;
+            color: var(--text-main);
+            font-weight: 500;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 42px;
+            height: 24px;
+            flex-shrink: 0;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            inset: 0;
+            background-color: #cbd5e1;
+            transition: 0.2s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: #ffffff;
+            transition: 0.2s;
+            border-radius: 50%;
+        }
+
+        .switch input:checked + .slider {
+            background-color: var(--primary-color);
+        }
+
+        .switch input:checked + .slider:before {
+            transform: translateX(18px);
+        }
+
+        .switch input:disabled + .slider {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .dependent-section {
+            transition: opacity 0.2s;
+        }
+
+        .dependent-section.disabled-section {
+            opacity: 0.45;
+            pointer-events: none;
+            user-select: none;
+        }
+
+        .alarm-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .time-picker-trigger {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 9px 12px;
+            cursor: pointer;
+            text-align: left;
+        }
+
+        .time-picker-trigger:hover {
+            border-color: var(--primary-color);
+        }
+
+        .selected-time-text {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .clock-icon-hint {
+            font-size: 1.05rem;
+            line-height: 1;
+        }
+
+        .add-alarm-btn {
+            background-color: #e0e7ff;
+            color: #1d4ed8;
+            border: none;
+            border-radius: 10px;
+            padding: 9px 13px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .add-alarm-btn:hover {
+            background-color: #c7d2fe;
+        }
+
+        .alarm-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-top: 10px;
+        }
+
+        .alarm-list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 8px 12px;
+            font-size: 0.84rem;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .alarm-empty-text {
+            font-size: 0.78rem;
+            color: var(--text-sub);
+            margin-top: 8px;
+        }
+
+        .del-alarm-btn {
+            border: none;
+            background: transparent;
+            color: var(--error-color);
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .fixed-notice-box {
+            background-color: #f1f5f9;
+            border: 1px dashed #cbd5e1;
+            border-radius: 10px;
+            padding: 9px 12px;
+            font-size: 0.78rem;
+            color: var(--text-sub);
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+
+        .settings-input {
+            width: 100%;
+            padding: 9px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            font-size: 0.86rem;
+            color: var(--text-main);
+            background-color: var(--card-bg);
+        }
+
+        .settings-input:disabled {
+            background-color: #f1f5f9;
+            cursor: not-allowed;
+        }
+
+        .field-invalid .settings-label,
+        .field-invalid .time-picker-trigger,
+        .field-invalid .settings-input {
+            color: var(--error-color);
+            border-color: var(--error-color);
+        }
+
+        .field-invalid .settings-input,
+        .field-invalid .time-picker-trigger {
+            background-color: #fef2f2;
+        }
+
+        .field-error-text {
+            margin-top: 6px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--error-color);
+            min-height: 18px;
+            display: none;
+        }
+
+        .field-error-text.visible {
+            display: block;
+        }
+
+        .save-btn {
+            width: 100%;
+            background-color: var(--primary-color);
+            color: #ffffff;
+            border: none;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 0.92rem;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 4px;
+        }
+
+        .save-btn:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .save-feedback {
+            margin-top: 10px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #16a34a;
+            text-align: center;
+            min-height: 18px;
+            line-height: 1.4;
+        }
+
+        .save-feedback.error {
+            color: var(--error-color);
+        }
+
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(15, 23, 42, 0.45);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .modal-backdrop.open {
+            display: flex;
+        }
+
+        .modal-box {
+            width: 100%;
+            max-width: 320px;
+            background-color: var(--card-bg);
+            border-radius: 16px;
+            padding: 18px;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+        }
+
+        .modal-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: var(--text-main);
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 14px;
+        }
+
+        .source-footer {
+            text-align: center;
+            font-size: 0.75rem;
+            color: var(--text-sub);
+            margin-top: 16px;
+            border-top: 1px solid var(--border-color);
+            padding-top: 10px;
+        }
+
+        .source-footer a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <header>
+            <h1 class="app-title" id="headerTitle">⛅ 오늘의 날씨 비서</h1>
+            <div class="header-btns" id="defaultHeaderBtns">
+                <button class="action-btn" id="viewToggleBtn" onclick="toggleWeeklyView()">주간 날씨</button>
+                <button class="action-btn secondary" id="settingsOpenBtn" onclick="openSettingsView()">설정</button>
+                <button class="action-btn refresh-icon-btn" id="refreshBtn" title="새로고침" aria-label="새로고침" onclick="fetchWeatherData()">↻</button>
+            </div>
+            <div class="header-btns" id="settingsHeaderBtns" style="display: none;">
+                <button class="action-btn secondary" id="backFromSettingsBtn" onclick="closeSettingsView()">돌아가기</button>
+            </div>
+        </header>
+
+        <div class="content">
+            <div id="statusBox" class="status-box">
+                날씨 정보를 불러오는 중입니다...
+            </div>
+
+            <div id="errorMsg" class="error-msg"></div>
+
+            <!-- 1. 메인 날씨 대시보드 및 복장·준비물 추천 화면 -->
+            <div id="dailyView" class="view-section">
+                <div class="weather-card">
+                    <span id="dateBadge" class="date-badge">서울특별시</span>
+                    <div id="mainTemp" class="main-temp">-</div>
+                    <div id="weatherDesc" class="weather-desc">-</div>
+                </div>
+
+                <div class="hourly-section">
+                    <div class="hourly-title">⏰ 시간대별 날씨 예보 (1시간 단위)</div>
+                    <div id="hourlyScroll" class="hourly-scroll"></div>
+                </div>
+
+                <div class="weather-grid">
+                    <div class="weather-item">
+                        <div class="label">☀️ 자외선 지수</div>
+                        <div id="uvIndex" class="value">-</div>
+                    </div>
+                    <div class="weather-item">
+                        <div class="label">💧 습도</div>
+                        <div id="humidity" class="value">-</div>
+                    </div>
+                    <div class="weather-item">
+                        <div class="label">🌧️ 강우 확률</div>
+                        <div id="rainProb" class="value">-</div>
+                    </div>
+                    <div class="weather-item">
+                        <div class="label">🌫️ 미세먼지 농도</div>
+                        <div id="dust" class="value">-</div>
+                    </div>
+                </div>
+
+                <div class="recommendation-container">
+                    <div class="rec-top-bar">
+                        <span class="rec-section-label">오늘의 복장 및 준비 추천</span>
+                        <span id="toneBadge" class="tone-badge">말투: 정중함</span>
+                    </div>
+                    <div id="recHeaderMsg" class="rec-header-msg">
+                        날씨 분석 대기 중...
+                    </div>
+
+                    <div class="rec-box">
+                        <div class="rec-title">👗 코디 및 아우터 추천</div>
+                        <ul id="clothingList" class="rec-list"></ul>
+                    </div>
+
+                    <div class="rec-box">
+                        <div class="rec-title">👜 필요한 준비물</div>
+                        <ul id="itemPacks" class="rec-list"></ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. 주간 날씨 예보 화면 -->
+            <div id="weeklyView" class="view-section">
+                <div class="weekly-title">📅 향후 1주일간 기상 예보 (서울특별시)</div>
+                <div id="weeklyList" class="weekly-list"></div>
+            </div>
+
+            <!-- 3. 환경설정 화면 -->
+            <div id="settingsView" class="view-section">
+                <div class="settings-card">
+                    <!-- 1. 말투 설정 (본 화면 전용) -->
+                    <div class="settings-group">
+                        <label class="settings-label">1. 말투 설정 (본 화면)</label>
+                        <div class="tone-options">
+                            <button type="button" class="tone-btn active" data-screen-tone="polite" onclick="selectScreenTone('polite')">정중함</button>
+                            <button type="button" class="tone-btn" data-screen-tone="friendly" onclick="selectScreenTone('friendly')">친근함</button>
+                            <button type="button" class="tone-btn" data-screen-tone="direct" onclick="selectScreenTone('direct')">음슴체</button>
+                        </div>
+                        <p id="toneExampleText" class="tone-example"></p>
+                    </div>
+
+                    <!-- 1-2. 이메일 전용 말투 설정 -->
+                    <div class="settings-group">
+                        <label class="settings-label">1-2. 이메일 전용 말투 설정</label>
+                        <div class="tone-options">
+                            <button type="button" class="tone-btn" data-email-tone="polite" onclick="selectEmailTone('polite')">정중체</button>
+                            <button type="button" class="tone-btn" data-email-tone="friendly" onclick="selectEmailTone('friendly')">친근체</button>
+                            <button type="button" class="tone-btn" data-email-tone="direct" onclick="selectEmailTone('direct')">음슴체</button>
+                        </div>
+                        <p id="emailToneExampleText" class="tone-example"></p>
+                    </div>
+
+                    <!-- 2. 알림 활성화 -->
+                    <div class="settings-group">
+                        <label class="settings-label">2. 알림 활성화</label>
+                        <div class="toggle-row">
+                            <span class="toggle-label-text">이메일 알림 사용</span>
+                            <label class="switch">
+                                <input type="checkbox" id="alertEnabledInput" onchange="handleAlertEnabledChange()">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- 3. 알림 추가 -->
+                    <div id="alarmAddSection" class="settings-group dependent-section">
+                        <div class="settings-label-row">
+                            <label class="settings-label" id="alarmAddLabel">3. 알림 추가</label>
+                            <span id="alarmRequiredBadge" class="required-badge" style="display: none;">*필수입력</span>
+                        </div>
+                        <div class="alarm-bar">
+                            <button type="button" class="time-picker-trigger" id="timePickerTriggerBtn" aria-label="알림 시각 설정 팝업 열기" onclick="openTimePopup(this)">
+                                <span id="selectedTimeLabel" class="selected-time-text">07:30</span>
+                                <span class="clock-icon-hint" aria-hidden="true">🕒</span>
+                            </button>
+                            <button type="button" class="add-alarm-btn" onclick="openTimePopup(this)">알림 추가</button>
+                        </div>
+                        <div id="alarmListContainer" class="alarm-list"></div>
+                        <div id="alarmEmptyMsg" class="alarm-empty-text" style="display: none;">등록된 알림이 없습니다.</div>
+                        <div id="alarmErrorText" class="field-error-text" role="alert"></div>
+                    </div>
+
+                    <!-- 4. 알람으로 받을 내용 -->
+                    <div id="alarmContentSection" class="settings-group dependent-section">
+                        <label class="settings-label">4. 알람으로 받을 내용</label>
+                        <div class="fixed-notice-box">
+                            오늘의 기온과 옷차림 추천은 필수로 포함됩니다.
+                        </div>
+                        <div class="toggle-row">
+                            <span class="toggle-label-text">자외선 지수</span>
+                            <label class="switch">
+                                <input type="checkbox" id="includeUvInput" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div class="toggle-row">
+                            <span class="toggle-label-text">습도</span>
+                            <label class="switch">
+                                <input type="checkbox" id="includeHumidityInput" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div class="toggle-row">
+                            <span class="toggle-label-text">미세먼지 농도</span>
+                            <label class="switch">
+                                <input type="checkbox" id="includeDustInput">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- 5. 알람을 받을 이메일 주소 -->
+                    <div id="emailSection" class="settings-group dependent-section">
+                        <div class="settings-label-row">
+                            <label class="settings-label" id="emailLabel" for="emailInput">5. 알람을 받을 이메일 주소</label>
+                            <span id="emailRequiredBadge" class="required-badge" style="display: none;">*필수입력</span>
+                        </div>
+                        <p class="email-sub-guide">이 이메일 주소로 알람이 전송됩니다.</p>
+                        <input type="email" id="emailInput" class="settings-input" placeholder="example@domain.com" oninput="clearEmailValidationState()">
+                        <div id="emailErrorText" class="field-error-text" role="alert"></div>
+                    </div>
+
+                    <button type="button" class="save-btn" onclick="saveSettings()">저장</button>
+                    <div id="saveFeedback" class="save-feedback" aria-live="polite"></div>
+                </div>
+            </div>
+
+            <div class="source-footer">
+                데이터 출처: <a href="https://open-meteo.com/" target="_blank">Open-Meteo API</a> (날씨 · 대기질)
+            </div>
+        </div>
+    </div>
+
+    <!-- 알림 시각 설정 팝업 -->
+    <div id="timePopupModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="timeModalTitle" onclick="handleBackdropClick(event)">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div id="timeModalTitle" class="modal-title">알림 시각 설정</div>
+            <input type="time" id="popupTimeInput" class="settings-input" value="07:30">
+            <div class="modal-actions">
+                <button type="button" class="action-btn secondary" onclick="closeTimePopup()">취소</button>
+                <button type="button" class="action-btn" onclick="confirmTimePopup()">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'weather_assistant_settings_v5';
+        const PREV_STORAGE_KEYS = ['weather_assistant_settings_v4', 'weather_assistant_settings_v3'];
+        const TIMEZONE = 'Asia/Seoul';
+        const LATITUDE = 37.5665;
+        const LONGITUDE = 126.9780;
+        const DEFAULT_ALARM_TIME = '07:30';
+
+        const TONE_META = {
+            polite: {
+                screenLabel: '정중함',
+                emailLabel: '정중체',
+                example: '정중한 말투로 오늘의 날씨를 알려드리겠습니다.'
+            },
+            friendly: {
+                screenLabel: '친근함',
+                emailLabel: '친근체',
+                example: '오늘의 날씨를 알려드릴게요!'
+            },
+            direct: {
+                screenLabel: '음슴체',
+                emailLabel: '음슴체',
+                example: '명사형 종결 말투를 사용함.'
+            }
+        };
+
+        let appSettings = {
+            tone: 'polite',
+            emailTone: 'polite',
+            alertEnabled: false,
+            selectedTime: DEFAULT_ALARM_TIME,
+            alarms: [],
+            includeUv: true,
+            includeHumidity: true,
+            includeDust: false,
+            email: ''
+        };
+
+        let lastWeatherData = null;
+        let lastAirQualityData = null;
+        let currentMode = 'daily';
+        let returnModeAfterSettings = 'daily';
+        let saveFeedbackTimer = null;
+        let modalTriggerElement = null;
+
+        function registerServiceWorker() {
+            if ('serviceWorker' in navigator && (window.isSecureContext || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+                });
+            }
+        }
+
+        function getSeoulHourSlotKey(date = new Date()) {
+            const parts = new Intl.DateTimeFormat('sv-SE', {
+                timeZone: TIMEZONE,
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                hour12: false
+            }).formatToParts(date);
+
+            const map = {};
+            parts.forEach(p => {
+                if (p.type !== 'literal') map[p.type] = p.value;
+            });
+
+            return `${map.year}-${map.month}-${map.day}T${map.hour}:00`;
+        }
+
+        function findHourIndexByTimeArray(times) {
+            if (!Array.isArray(times) || times.length === 0) {
+                return 0;
+            }
+
+            const targetKey = getSeoulHourSlotKey();
+            const exactIdx = times.findIndex(t => typeof t === 'string' && t.slice(0, 16) === targetKey);
+            if (exactIdx !== -1) {
+                return exactIdx;
+            }
+
+            const targetComparable = targetKey.replace('T', ' ');
+            const nextIdx = times.findIndex(t => typeof t === 'string' && t.slice(0, 16).replace('T', ' ') >= targetComparable);
+            if (nextIdx !== -1) {
+                return nextIdx;
+            }
+
+            return Math.min(new Date().getHours(), times.length - 1);
+        }
+
+        function getAirQualitySummary(airData) {
+            const hourly = airData?.hourly;
+            if (!hourly || !Array.isArray(hourly.time) || hourly.time.length === 0) {
+                return {
+                    pm10: null,
+                    pm25: null,
+                    grade: null,
+                    isBad: false,
+                    displayText: '정보가 없어 불러오지 못했습니다.'
+                };
+            }
+
+            const idx = findHourIndexByTimeArray(hourly.time);
+            const rawPm10 = hourly.pm10?.[idx];
+            const rawPm25 = hourly.pm2_5?.[idx];
+
+            const pm10 = typeof rawPm10 === 'number' && !Number.isNaN(rawPm10) ? rawPm10 : null;
+            const pm25 = typeof rawPm25 === 'number' && !Number.isNaN(rawPm25) ? rawPm25 : null;
+
+            if (pm10 === null && pm25 === null) {
+                return {
+                    pm10: null,
+                    pm25: null,
+                    grade: null,
+                    isBad: false,
+                    displayText: '정보가 없어 불러오지 못했습니다.'
+                };
+            }
+
+            let levelScore = 0;
+            if (pm25 !== null) {
+                if (pm25 > 75) levelScore = Math.max(levelScore, 3);
+                else if (pm25 > 35) levelScore = Math.max(levelScore, 2);
+                else if (pm25 > 15) levelScore = Math.max(levelScore, 1);
+            }
+            if (pm10 !== null) {
+                if (pm10 > 150) levelScore = Math.max(levelScore, 3);
+                else if (pm10 > 80) levelScore = Math.max(levelScore, 2);
+                else if (pm10 > 30) levelScore = Math.max(levelScore, 1);
+            }
+
+            const gradeLabels = ['좋음', '보통', '나쁨', '매우 나쁨'];
+            const grade = gradeLabels[levelScore];
+            const isBad = levelScore >= 2;
+
+            const parts = [];
+            if (pm10 !== null) parts.push(`PM10 ${Math.round(pm10)}`);
+            if (pm25 !== null) parts.push(`PM2.5 ${Math.round(pm25)}`);
+
+            return {
+                pm10,
+                pm25,
+                grade,
+                isBad,
+                displayText: `${grade} (${parts.join(' · ')} μg/m³)`
+            };
+        }
+
+        function persistSettings() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(appSettings));
+            } catch (e) {
+                // 저장 제한 환경 무시
+            }
+        }
+
+        function readLegacyRawSettings() {
+            for (const key of PREV_STORAGE_KEYS) {
+                const raw = localStorage.getItem(key);
+                if (raw !== null) return raw;
+            }
+            return null;
+        }
+
+        function loadSettings() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY) ?? readLegacyRawSettings();
+                if (raw !== null) {
+                    const parsed = JSON.parse(raw);
+                    const screenTone = TONE_META[parsed.tone] ? parsed.tone : 'polite';
+                    const emailTone = TONE_META[parsed.emailTone] ? parsed.emailTone : screenTone;
+                    appSettings = {
+                        ...appSettings,
+                        ...parsed,
+                        tone: screenTone,
+                        emailTone: emailTone,
+                        alertEnabled: Boolean(parsed.alertEnabled),
+                        selectedTime: parsed.selectedTime || parsed.alertTime || DEFAULT_ALARM_TIME,
+                        alarms: Array.isArray(parsed.alarms) ? parsed.alarms : []
+                    };
+                    if (!localStorage.getItem(STORAGE_KEY)) {
+                        persistSettings();
+                    }
+                }
+            } catch (e) {
+                // 기본값 유지
+            }
+            applySettingsToUI();
+        }
+
+        function clearValidationErrors() {
+            const alarmSec = document.getElementById('alarmAddSection');
+            const emailSec = document.getElementById('emailSection');
+            const alarmErr = document.getElementById('alarmErrorText');
+            const emailErr = document.getElementById('emailErrorText');
+            const feedback = document.getElementById('saveFeedback');
+
+            alarmSec.classList.remove('field-invalid');
+            emailSec.classList.remove('field-invalid');
+            alarmErr.innerText = '';
+            alarmErr.classList.remove('visible');
+            emailErr.innerText = '';
+            emailErr.classList.remove('visible');
+            feedback.classList.remove('error');
+        }
+
+        function clearEmailValidationState() {
+            const emailSec = document.getElementById('emailSection');
+            const emailErr = document.getElementById('emailErrorText');
+            emailSec.classList.remove('field-invalid');
+            emailErr.innerText = '';
+            emailErr.classList.remove('visible');
+        }
+
+        function setFieldError(sectionId, errorId, message) {
+            const sec = document.getElementById(sectionId);
+            const errEl = document.getElementById(errorId);
+            sec.classList.add('field-invalid');
+            errEl.innerText = message;
+            errEl.classList.add('visible');
+        }
+
+        function isValidEmailFormat(email) {
+            if (!email || !email.includes('@')) return false;
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        }
+
+        function applySettingsToUI() {
+            selectScreenTone(appSettings.tone, false);
+            selectEmailTone(appSettings.emailTone, false);
+            document.getElementById('alertEnabledInput').checked = Boolean(appSettings.alertEnabled);
+            document.getElementById('selectedTimeLabel').innerText = appSettings.selectedTime || DEFAULT_ALARM_TIME;
+            document.getElementById('popupTimeInput').value = appSettings.selectedTime || DEFAULT_ALARM_TIME;
+            document.getElementById('includeUvInput').checked = Boolean(appSettings.includeUv);
+            document.getElementById('includeHumidityInput').checked = Boolean(appSettings.includeHumidity);
+            document.getElementById('includeDustInput').checked = Boolean(appSettings.includeDust);
+            document.getElementById('emailInput').value = appSettings.email || '';
+
+            clearValidationErrors();
+            renderAlarmList();
+            handleAlertEnabledChange();
+        }
+
+        function selectScreenTone(tone, shouldPersist = true) {
+            if (!TONE_META[tone]) tone = 'polite';
+            appSettings.tone = tone;
+
+            document.querySelectorAll('[data-screen-tone]').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.screenTone === tone);
+            });
+
+            document.getElementById('toneExampleText').innerText = TONE_META[tone].example;
+
+            if (shouldPersist) {
+                persistSettings();
+                if (lastWeatherData) {
+                    renderRecommendation(lastWeatherData, lastAirQualityData);
+                }
+            }
+        }
+
+        function selectEmailTone(tone, shouldPersist = true) {
+            if (!TONE_META[tone]) tone = 'polite';
+            appSettings.emailTone = tone;
+
+            document.querySelectorAll('[data-email-tone]').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.emailTone === tone);
+            });
+
+            document.getElementById('emailToneExampleText').innerText = TONE_META[tone].example;
+
+            if (shouldPersist) {
+                persistSettings();
+            }
+        }
+
+        function handleAlertEnabledChange() {
+            const enabled = document.getElementById('alertEnabledInput').checked;
+            appSettings.alertEnabled = enabled;
+
+            const sections = [
+                document.getElementById('alarmAddSection'),
+                document.getElementById('alarmContentSection'),
+                document.getElementById('emailSection')
+            ];
+
+            sections.forEach(sec => {
+                if (sec) {
+                    sec.classList.toggle('disabled-section', !enabled);
+                }
+            });
+
+            const alarmReqBadge = document.getElementById('alarmRequiredBadge');
+            const emailReqBadge = document.getElementById('emailRequiredBadge');
+            if (alarmReqBadge) alarmReqBadge.style.display = enabled ? 'inline' : 'none';
+            if (emailReqBadge) emailReqBadge.style.display = enabled ? 'inline' : 'none';
+
+            const controls = [
+                document.getElementById('timePickerTriggerBtn'),
+                document.querySelector('.add-alarm-btn'),
+                document.getElementById('includeUvInput'),
+                document.getElementById('includeHumidityInput'),
+                document.getElementById('includeDustInput'),
+                document.getElementById('emailInput')
+            ];
+
+            controls.forEach(ctrl => {
+                if (ctrl) ctrl.disabled = !enabled;
+            });
+
+            document.querySelectorAll('.del-alarm-btn').forEach(btn => {
+                btn.disabled = !enabled;
+            });
+
+            if (!enabled) {
+                closeTimePopup(false);
+                clearValidationErrors();
+            }
+        }
+
+        function openTimePopup(triggerEl = null) {
+            if (!document.getElementById('alertEnabledInput').checked) return;
+            modalTriggerElement = triggerEl || document.activeElement;
+            const popupInput = document.getElementById('popupTimeInput');
+            popupInput.value = DEFAULT_ALARM_TIME;
+            document.getElementById('timePopupModal').classList.add('open');
+            setTimeout(() => popupInput.focus(), 0);
+        }
+
+        function closeTimePopup(restoreFocus = true) {
+            const modal = document.getElementById('timePopupModal');
+            if (!modal.classList.contains('open')) return;
+            modal.classList.remove('open');
+            if (restoreFocus && modalTriggerElement && typeof modalTriggerElement.focus === 'function') {
+                const target = modalTriggerElement;
+                modalTriggerElement = null;
+                setTimeout(() => target.focus(), 0);
+            } else {
+                modalTriggerElement = null;
+            }
+        }
+
+        function handleBackdropClick(event) {
+            if (event.target.id === 'timePopupModal') {
+                closeTimePopup(true);
+            }
+        }
+
+        function confirmTimePopup() {
+            const picked = document.getElementById('popupTimeInput').value || DEFAULT_ALARM_TIME;
+            appSettings.selectedTime = picked;
+            document.getElementById('selectedTimeLabel').innerText = picked;
+
+            if (!appSettings.alarms.includes(picked)) {
+                appSettings.alarms.push(picked);
+                appSettings.alarms.sort();
+            }
+
+            if (appSettings.alarms.length > 0) {
+                const alarmSec = document.getElementById('alarmAddSection');
+                const alarmErr = document.getElementById('alarmErrorText');
+                alarmSec.classList.remove('field-invalid');
+                alarmErr.innerText = '';
+                alarmErr.classList.remove('visible');
+            }
+
+            renderAlarmList();
+            persistSettings();
+            closeTimePopup(true);
+        }
+
+        function deleteAlarm(timeVal) {
+            if (!document.getElementById('alertEnabledInput').checked) return;
+            appSettings.alarms = appSettings.alarms.filter(t => t !== timeVal);
+            renderAlarmList();
+            persistSettings();
+        }
+
+        function renderAlarmList() {
+            const listEl = document.getElementById('alarmListContainer');
+            const emptyMsg = document.getElementById('alarmEmptyMsg');
+            listEl.innerHTML = '';
+
+            const enabled = document.getElementById('alertEnabledInput').checked;
+
+            if (!appSettings.alarms.length) {
+                emptyMsg.style.display = 'block';
+                return;
+            }
+            emptyMsg.style.display = 'none';
+
+            appSettings.alarms.forEach(timeStr => {
+                const row = document.createElement('div');
+                row.className = 'alarm-list-item';
+
+                const timeSpan = document.createElement('span');
+                timeSpan.innerText = `⏰ ${timeStr}`;
+
+                const delBtn = document.createElement('button');
+                delBtn.type = 'button';
+                delBtn.className = 'del-alarm-btn';
+                delBtn.innerText = '삭제';
+                delBtn.disabled = !enabled;
+                delBtn.onclick = () => deleteAlarm(timeStr);
+
+                row.appendChild(timeSpan);
+                row.appendChild(delBtn);
+                listEl.appendChild(row);
+            });
+        }
+
+        function saveSettings() {
+            clearValidationErrors();
+
+            const enabled = document.getElementById('alertEnabledInput').checked;
+            const emailVal = document.getElementById('emailInput').value.trim();
+            const feedback = document.getElementById('saveFeedback');
+
+            if (saveFeedbackTimer) {
+                clearTimeout(saveFeedbackTimer);
+            }
+
+            if (enabled) {
+                let hasValidationError = false;
+
+                if (!Array.isArray(appSettings.alarms) || appSettings.alarms.length === 0) {
+                    setFieldError('alarmAddSection', 'alarmErrorText', '알람 시각을 1개 이상 추가해 주세요.');
+                    hasValidationError = true;
+                }
+
+                if (!emailVal) {
+                    setFieldError('emailSection', 'emailErrorText', '이메일 주소를 입력해 주세요.');
+                    hasValidationError = true;
+                } else if (!isValidEmailFormat(emailVal)) {
+                    setFieldError('emailSection', 'emailErrorText', '유효하지 않은 형식입니다.');
+                    hasValidationError = true;
+                }
+
+                if (hasValidationError) {
+                    feedback.classList.add('error');
+                    feedback.innerText = '필수 입력 항목 또는 이메일 형식을 확인해 주세요.';
+                    return;
+                }
+            } else if (emailVal && !isValidEmailFormat(emailVal)) {
+                setFieldError('emailSection', 'emailErrorText', '유효하지 않은 형식입니다.');
+                feedback.classList.add('error');
+                feedback.innerText = '유효하지 않은 형식입니다.';
+                return;
+            }
+
+            appSettings.alertEnabled = enabled;
+            appSettings.includeUv = document.getElementById('includeUvInput').checked;
+            appSettings.includeHumidity = document.getElementById('includeHumidityInput').checked;
+            appSettings.includeDust = document.getElementById('includeDustInput').checked;
+            appSettings.email = emailVal;
+
+            persistSettings();
+
+            feedback.classList.remove('error');
+            feedback.innerText = '설정이 반영되었습니다.';
+            saveFeedbackTimer = setTimeout(() => {
+                feedback.innerText = '';
+            }, 10000);
+
+            if (lastWeatherData) {
+                renderRecommendation(lastWeatherData, lastAirQualityData);
+            }
+        }
+
+        function updateViewVisibility() {
+            const dailyView = document.getElementById('dailyView');
+            const weeklyView = document.getElementById('weeklyView');
+            const settingsView = document.getElementById('settingsView');
+            const statusBox = document.getElementById('statusBox');
+            const errorMsg = document.getElementById('errorMsg');
+            const defaultHeaderBtns = document.getElementById('defaultHeaderBtns');
+            const settingsHeaderBtns = document.getElementById('settingsHeaderBtns');
+            const viewToggleBtn = document.getElementById('viewToggleBtn');
+            const headerTitle = document.getElementById('headerTitle');
+
+            dailyView.classList.remove('active');
+            weeklyView.classList.remove('active');
+            settingsView.classList.remove('active');
+
+            if (currentMode === 'settings') {
+                defaultHeaderBtns.style.display = 'none';
+                settingsHeaderBtns.style.display = 'flex';
+                settingsView.classList.add('active');
+                statusBox.style.display = 'none';
+                errorMsg.style.display = 'none';
+                headerTitle.innerText = '⚙️ 환경설정';
+                return;
+            }
+
+            defaultHeaderBtns.style.display = 'flex';
+            settingsHeaderBtns.style.display = 'none';
+
+            if (!lastWeatherData) {
+                headerTitle.innerText = currentMode === 'weekly' ? '📅 주간 날씨 예보' : '⛅ 오늘의 날씨 비서';
+                viewToggleBtn.innerText = currentMode === 'weekly' ? '오늘 날씨' : '주간 날씨';
+                return;
+            }
+
+            statusBox.style.display = 'none';
+            if (currentMode === 'weekly') {
+                weeklyView.classList.add('active');
+                headerTitle.innerText = '📅 주간 날씨 예보';
+                viewToggleBtn.innerText = '오늘 날씨';
+            } else {
+                dailyView.classList.add('active');
+                headerTitle.innerText = '⛅ 오늘의 날씨 비서';
+                viewToggleBtn.innerText = '주간 날씨';
+            }
+        }
+
+        function toggleWeeklyView() {
+            currentMode = currentMode === 'weekly' ? 'daily' : 'weekly';
+            updateViewVisibility();
+        }
+
+        function openSettingsView() {
+            if (currentMode === 'daily' || currentMode === 'weekly') {
+                returnModeAfterSettings = currentMode;
+            }
+            currentMode = 'settings';
+            applySettingsToUI();
+            updateViewVisibility();
+        }
+
+        function closeSettingsView() {
+            currentMode = returnModeAfterSettings;
+            updateViewVisibility();
+        }
+
+        function getWeatherInfo(code) {
+            if (code === 0) return { text: '맑음', nounText: '맑음', icon: '☀️', isSnow: false, isRain: false };
+            if ([1, 2].includes(code)) return { text: '구름 조금', nounText: '구름 조금', icon: '⛅', isSnow: false, isRain: false };
+            if (code === 3) return { text: '흐림', nounText: '흐림', icon: '☁️', isSnow: false, isRain: false };
+            if ([51, 53, 55, 61, 63, 65, 80, 81, 82].includes(code)) return { text: '비', nounText: '비', icon: '🌧️', isSnow: false, isRain: true };
+            if ([71, 73, 75, 77, 85, 86].includes(code)) return { text: '눈', nounText: '눈', icon: '❄️', isSnow: true, isRain: false };
+            if ([45, 48].includes(code)) return { text: '안개', nounText: '안개', icon: '🌫️', isSnow: false, isRain: false };
+            return { text: '기타 날씨', nounText: '기타 날씨', icon: '🌡️', isSnow: false, isRain: false };
+        }
+
+        function toNounList(list) {
+            return list.map(entry =>
+                entry
+                    .replace(/\(아우터\)/g, ' 아우터')
+                    .replace(/\(필수\)/g, ' 필수')
+                    .replace(/\s+/g, ' ')
+                    .trim()
+            );
+        }
+
+        function formatByTone(tone, parts) {
+            if (tone === 'direct') {
+                const lines = [parts.directWeatherLine, parts.directTempLine, parts.directRainLine, parts.directSnowLine, parts.directDustLine, parts.directUvLine].filter(Boolean);
+                return lines.length ? lines.join(' ') : '오늘 날씨 요약 안내.';
+            }
+
+            if (tone === 'friendly') {
+                const lines = [parts.friendlyWeatherLine, parts.friendlyTempLine, parts.friendlyRainLine, parts.friendlySnowLine, parts.friendlyDustLine, parts.friendlyUvLine].filter(Boolean);
+                const prefix = '오늘의 날씨를 알려드릴게요! ';
+                return lines.length ? `${prefix}${lines.join(' ')} 외출 준비 잘 챙기세요~` : `${prefix}오늘도 기분 좋은 하루 보내세요~`;
+            }
+
+            const lines = [parts.politeTempLine, parts.politeRainLine, parts.politeSnowLine, parts.politeDustLine, parts.politeUvLine].filter(Boolean);
+            if (!lines.length) {
+                return '오늘의 날씨 정보를 바탕으로 복장과 준비물을 안내해 드립니다.';
+            }
+            return '오늘의 날씨를 알려드립니다. ' + lines.join(' ');
+        }
+
+        function buildRecommendationData(data, airData = null, targetTone = appSettings.tone) {
+            const current = data.current || {};
+            const daily = data.daily || {};
+            const hourly = data.hourly || {};
+
+            const temp = typeof current.temperature_2m === 'number' ? current.temperature_2m : null;
+            const minTemp = typeof daily.temperature_2m_min?.[0] === 'number' ? daily.temperature_2m_min[0] : null;
+            const maxTemp = typeof daily.temperature_2m_max?.[0] === 'number' ? daily.temperature_2m_max[0] : null;
+            const uvMax = typeof daily.uv_index_max?.[0] === 'number' ? daily.uv_index_max[0] : null;
+
+            const currentHourIdx = findHourIndexByTimeArray(hourly.time);
+            const rainProb = Array.isArray(hourly.precipitation_probability)
+                ? (hourly.precipitation_probability[currentHourIdx] ?? hourly.precipitation_probability[0] ?? null)
+                : null;
+
+            const weatherInfo = getWeatherInfo(current.weather_code);
+            const hasSnow = weatherInfo.isSnow || [71, 73, 75, 77, 85, 86].includes(daily.weather_code?.[0]);
+            const hasRain = weatherInfo.isRain || (typeof current.precipitation === 'number' && current.precipitation > 0);
+            const highRainProb = typeof rainProb === 'number' && rainProb >= 60;
+            const veryHighRainProb = typeof rainProb === 'number' && rainProb >= 80;
+
+            const airSummary = getAirQualitySummary(airData);
+
+            const clothes = [];
+            const items = [];
+
+            let directWeatherLine = current.weather_code !== undefined && current.weather_code !== null
+                ? `오늘 날씨는 ${weatherInfo.nounText}.`
+                : '';
+            let friendlyWeatherLine = current.weather_code !== undefined && current.weather_code !== null
+                ? `오늘 날씨는 ${weatherInfo.text}이에요!`
+                : '';
+
+            let politeTempLine = '';
+            let friendlyTempLine = '';
+            let directTempLine = '';
+
+            let politeRainLine = '';
+            let friendlyRainLine = '';
+            let directRainLine = '';
+
+            let politeSnowLine = '';
+            let friendlySnowLine = '';
+            let directSnowLine = '';
+
+            let politeDustLine = '';
+            let friendlyDustLine = '';
+            let directDustLine = '';
+
+            let politeUvLine = '';
+            let friendlyUvLine = '';
+            let directUvLine = '';
+
+            if (temp !== null) {
+                if (temp <= 0) {
+                    politeTempLine = '영하권 추위가 나타납니다.';
+                    friendlyTempLine = '영하권 추위가 찾아왔어요!';
+                    directTempLine = '영하권 추위.';
+                    clothes.push('두꺼운 패딩(아우터)', '기모 상·하의, 목도리');
+                    items.push('방한 장갑', '보온 텀블러');
+                } else if (temp < 5) {
+                    politeTempLine = '기온이 낮아 추운 날씨입니다.';
+                    friendlyTempLine = '날씨가 꽤 추워요!';
+                    directTempLine = '낮은 기온으로 추운 편.';
+                    clothes.push('패딩 또는 두꺼운 코트(아우터)', '니트 또는 기모 긴팔');
+                    items.push('목도리', '보습 립밤');
+                } else if (temp < 15) {
+                    politeTempLine = '기온이 낮아 쌀쌀한 날씨입니다.';
+                    friendlyTempLine = '쌀쌀한 기온이 감돌아요~';
+                    directTempLine = '쌀쌀한 기온.';
+                    clothes.push('자켓, 가디건 또는 코트(아우터)', '긴팔 티셔츠');
+                    items.push('외투 또는 가디건');
+                } else if (temp < 23) {
+                    politeTempLine = '선선한 기온이 이어집니다.';
+                    friendlyTempLine = '선선하고 기분 좋은 기온이에요~';
+                    directTempLine = '선선한 기온.';
+                    clothes.push('가벼운 아우터 또는 셔츠', '긴바지');
+                    items.push('일교차 대비 얇은 겉옷');
+                } else {
+                    politeTempLine = '기온이 높아 더운 날씨입니다.';
+                    friendlyTempLine = '기온이 높아서 더운 편이에요!';
+                    directTempLine = '높은 기온으로 더운 편.';
+                    clothes.push('반팔 티셔츠 또는 얇은 옷', '통기성 좋은 하의');
+                    items.push('생수 또는 휴대용 선풍기');
+                }
+            }
+
+            if (minTemp !== null && maxTemp !== null && (maxTemp - minTemp) >= 10) {
+                if (!clothes.some(c => c.includes('아우터') || c.includes('겉옷'))) {
+                    clothes.push('일교차 대비 겉옷(아우터)');
+                }
+            }
+
+            if (hasSnow) {
+                politeSnowLine = '눈 예보가 있습니다.';
+                friendlySnowLine = '눈 소식이 있어요!';
+                directSnowLine = '눈 예보.';
+                items.push('우산', '장갑');
+            } else if (veryHighRainProb || hasRain) {
+                politeRainLine = `강수 확률이 ${rainProb ?? '높은'}%로 비 가능성이 높습니다.`;
+                friendlyRainLine = `강수 확률이 ${rainProb ?? '높은'}%라 비 올 가능성이 높아요!`;
+                directRainLine = `강수 확률 ${rainProb ?? '높음'}%로 비 가능성 높음.`;
+                items.push('우산(필수)');
+                if (temp !== null && temp < 15) {
+                    clothes.push('방수 점퍼 또는 방수 아우터');
+                }
+            } else if (highRainProb) {
+                politeRainLine = `강수 확률이 ${rainProb}%입니다.`;
+                friendlyRainLine = `강수 확률이 ${rainProb}%이니 우산 챙기세요~`;
+                directRainLine = `강수 확률 ${rainProb}%.`;
+                items.push('우산 챙기기');
+            }
+
+            if (airSummary.isBad) {
+                politeDustLine = `미세먼지 농도가 '${airSummary.grade}' 수준입니다.`;
+                friendlyDustLine = `미세먼지 농도가 '${airSummary.grade}' 수준이니 마스크 꼭 챙기세요!`;
+                directDustLine = `미세먼지 '${airSummary.grade}'.`;
+                items.push('마스크(KF80/KF94)');
+            }
+
+            if (uvMax !== null && uvMax >= 3) {
+                politeUvLine = `자외선 지수(${uvMax})가 높은 편입니다.`;
+                friendlyUvLine = `자외선 지수(${uvMax})가 높은 편이에요~`;
+                directUvLine = `자외선 지수(${uvMax})는 높은 편.`;
+                items.push('선크림');
+            }
+
+            const uniqueClothes = [...new Set(clothes)];
+            const uniqueItems = [...new Set(items)];
+
+            const finalClothes = targetTone === 'direct'
+                ? toNounList(uniqueClothes)
+                : uniqueClothes;
+            const finalItems = targetTone === 'direct'
+                ? toNounList(uniqueItems)
+                : uniqueItems;
+
+            const headline = formatByTone(targetTone, {
+                directWeatherLine,
+                friendlyWeatherLine,
+                politeTempLine,
+                friendlyTempLine,
+                directTempLine,
+                politeRainLine,
+                friendlyRainLine,
+                directRainLine,
+                politeSnowLine,
+                friendlySnowLine,
+                directSnowLine,
+                politeDustLine,
+                friendlyDustLine,
+                directDustLine,
+                politeUvLine,
+                friendlyUvLine,
+                directUvLine
+            });
+
+            return {
+                headline,
+                clothes: finalClothes.length ? finalClothes : ['정보가 없어 불러오지 못했습니다.'],
+                items: finalItems.length ? finalItems : ['정보가 없어 불러오지 못했습니다.']
+            };
+        }
+
+        function renderRecommendation(data, airData = null) {
+            const toneLabel = TONE_META[appSettings.tone]?.screenLabel || '정중함';
+            document.getElementById('toneBadge').innerText = `말투: ${toneLabel}`;
+
+            const rec = buildRecommendationData(data, airData, appSettings.tone);
+            document.getElementById('recHeaderMsg').innerText = rec.headline;
+
+            const clothingList = document.getElementById('clothingList');
+            const itemPacks = document.getElementById('itemPacks');
+            clothingList.innerHTML = '';
+            itemPacks.innerHTML = '';
+
+            rec.clothes.forEach(c => {
+                const li = document.createElement('li');
+                li.innerText = c;
+                clothingList.appendChild(li);
+            });
+
+            rec.items.forEach(it => {
+                const li = document.createElement('li');
+                li.innerText = it;
+                itemPacks.appendChild(li);
+            });
+        }
+
+        async function fetchWeatherData() {
+            const statusBox = document.getElementById('statusBox');
+            const errorMsg = document.getElementById('errorMsg');
+            const dailyView = document.getElementById('dailyView');
+            const weeklyView = document.getElementById('weeklyView');
+
+            if (currentMode === 'settings') {
+                currentMode = returnModeAfterSettings;
+            }
+
+            statusBox.style.display = 'block';
+            statusBox.innerText = '날씨 및 미세먼지 정보를 불러오는 중입니다...';
+            errorMsg.style.display = 'none';
+            dailyView.classList.remove('active');
+            weeklyView.classList.remove('active');
+
+            const weatherUrl =
+                `https://api.open-meteo.com/v1/forecast` +
+                `?latitude=${LATITUDE}&longitude=${LONGITUDE}` +
+                `&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m` +
+                `&hourly=temperature_2m,weather_code,precipitation_probability` +
+                `&daily=weather_code,temperature_2m_max,temperature_2m_min,uv_index_max` +
+                `&timezone=${encodeURIComponent(TIMEZONE)}`;
+
+            const airQualityUrl =
+                `https://air-quality-api.open-meteo.com/v1/air-quality` +
+                `?latitude=${LATITUDE}&longitude=${LONGITUDE}` +
+                `&hourly=pm10,pm2_5` +
+                `&timezone=${encodeURIComponent(TIMEZONE)}`;
+
+            try {
+                const [weatherRes, airRes] = await Promise.allSettled([
+                    fetch(weatherUrl),
+                    fetch(airQualityUrl)
+                ]);
+
+                if (weatherRes.status !== 'fulfilled' || !weatherRes.value.ok) {
+                    const statusCode = weatherRes.status === 'fulfilled' ? `HTTP ${weatherRes.value.status}` : '네트워크 오류';
+                    throw new Error(`날씨 서버 응답 오류 (${statusCode})`);
+                }
+
+                const data = await weatherRes.value.json();
+                let airData = null;
+
+                if (airRes.status === 'fulfilled' && airRes.value.ok) {
+                    airData = await airRes.value.json();
+                }
+
+                lastWeatherData = data;
+                lastAirQualityData = airData;
+
+                renderDashboard(data, airData);
+                renderWeekly(data);
+                renderRecommendation(data, airData);
+
+                statusBox.style.display = 'none';
+                updateViewVisibility();
+            } catch (error) {
+                statusBox.style.display = 'none';
+                errorMsg.innerHTML = `⚠️ 데이터를 불러오지 못했습니다.<br>(${error.message})`;
+                errorMsg.style.display = 'block';
+            }
+        }
+
+        function renderDashboard(data, airData = null) {
+            const current = data.current || {};
+            const daily = data.daily || {};
+            const hourly = data.hourly || {};
+
+            const todayStr = new Date().toLocaleDateString('ko-KR', {
+                timeZone: TIMEZONE,
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                weekday: 'long'
+            });
+            document.getElementById('dateBadge').innerText = `${todayStr} | 서울특별시`;
+
+            const temp = current.temperature_2m;
+            const minTemp = daily.temperature_2m_min?.[0];
+            const maxTemp = daily.temperature_2m_max?.[0];
+            const weather = getWeatherInfo(current.weather_code);
+
+            const minText = minTemp !== undefined && minTemp !== null ? `${minTemp}°C` : '정보가 없어 불러오지 못했습니다.';
+            const maxText = maxTemp !== undefined && maxTemp !== null ? `${maxTemp}°C` : '정보가 없어 불러오지 못했습니다.';
+            const curText = temp !== undefined && temp !== null ? `${temp}°C` : '정보가 없어 불러오지 못했습니다.';
+
+            document.getElementById('mainTemp').innerText = `최저 ${minText} / 최고 ${maxText} (현재 ${curText})`;
+            document.getElementById('weatherDesc').innerText = current.weather_code !== undefined && current.weather_code !== null
+                ? `${weather.icon} ${weather.text}`
+                : '정보가 없어 불러오지 못했습니다.';
+
+            const humidityEl = document.getElementById('humidity');
+            humidityEl.innerText = (current.relative_humidity_2m !== undefined && current.relative_humidity_2m !== null)
+                ? `${current.relative_humidity_2m}%`
+                : '정보가 없어 불러오지 못했습니다.';
+
+            const currentHourIdx = findHourIndexByTimeArray(hourly.time);
+            const rainProbEl = document.getElementById('rainProb');
+            const rainVal = hourly.precipitation_probability?.[currentHourIdx] ?? hourly.precipitation_probability?.[0];
+            rainProbEl.innerText = (rainVal !== undefined && rainVal !== null)
+                ? `${rainVal}%`
+                : '정보가 없어 불러오지 못했습니다.';
+
+            const uvIndexEl = document.getElementById('uvIndex');
+            const uvVal = daily.uv_index_max?.[0];
+            uvIndexEl.innerText = (uvVal !== undefined && uvVal !== null)
+                ? `최고 지수 ${uvVal}`
+                : '정보가 없어 불러오지 못했습니다.';
+
+            const dustEl = document.getElementById('dust');
+            const airSummary = getAirQualitySummary(airData);
+            dustEl.innerText = airSummary.displayText;
+
+            const hourlyScroll = document.getElementById('hourlyScroll');
+            hourlyScroll.innerHTML = '';
+
+            if (Array.isArray(hourly.time) && hourly.time.length > 0) {
+                for (let i = currentHourIdx; i < currentHourIdx + 12; i++) {
+                    if (i >= hourly.time.length) break;
+                    const timeStr = typeof hourly.time[i] === 'string' ? hourly.time[i].slice(11, 16) : '--:--';
+                    const hTemp = hourly.temperature_2m?.[i];
+                    const hWeather = getWeatherInfo(hourly.weather_code?.[i]);
+
+                    const item = document.createElement('div');
+                    item.className = 'hourly-item';
+                    item.innerHTML = `
+                        <div class="hourly-time">${timeStr}</div>
+                        <div class="hourly-icon">${hWeather.icon}</div>
+                        <div class="hourly-temp">${hTemp !== undefined && hTemp !== null ? `${hTemp}°C` : '-'}</div>
+                    `;
+                    hourlyScroll.appendChild(item);
+                }
+            } else {
+                hourlyScroll.innerHTML = '<div style="font-size:0.82rem;color:#64748b;">정보가 없어 불러오지 못했습니다.</div>';
+            }
+        }
+
+        function renderWeekly(data) {
+            const daily = data.daily || {};
+            const weeklyList = document.getElementById('weeklyList');
+            weeklyList.innerHTML = '';
+
+            if (!Array.isArray(daily.time) || daily.time.length === 0) {
+                weeklyList.innerHTML = '<div class="status-box">정보가 없어 불러오지 못했습니다.</div>';
+                return;
+            }
+
+            for (let i = 0; i < daily.time.length; i++) {
+                const dateRaw = new Date(`${daily.time[i]}T12:00:00`);
+                const dateStr = dateRaw.toLocaleDateString('ko-KR', {
+                    timeZone: TIMEZONE,
+                    month: 'long',
+                    day: 'numeric',
+                    weekday: 'short'
+                });
+                const weather = getWeatherInfo(daily.weather_code?.[i]);
+                const maxT = daily.temperature_2m_max?.[i];
+                const minT = daily.temperature_2m_min?.[i];
+
+                const item = document.createElement('div');
+                item.className = `weekly-item ${i === 0 ? 'today' : ''}`;
+                item.innerHTML = `
+                    <span class="weekly-date">${dateStr} ${i === 0 ? '*오늘' : ''}</span>
+                    <span class="weekly-weather-info">${weather.icon} ${weather.text}</span>
+                    <span class="weekly-temps">${minT ?? '-'}°C / ${maxT ?? '-'}°C</span>
+                `;
+                weeklyList.appendChild(item);
+            }
+        }
+
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape') {
+                const modal = document.getElementById('timePopupModal');
+                if (modal && modal.classList.contains('open')) {
+                    event.preventDefault();
+                    closeTimePopup(true);
+                }
+            }
+        });
+
+        registerServiceWorker();
+        loadSettings();
+        updateViewVisibility();
+        fetchWeatherData();
+    </script>
+</body>
+</html>

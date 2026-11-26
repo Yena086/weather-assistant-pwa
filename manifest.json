@@ -1,0 +1,20 @@
+{
+  "name": "오늘의 날씨 비서",
+  "short_name": "날씨 비서",
+  "description": "날씨 요약과 맞춤 복장·준비물을 안내하는 오늘의 날씨 비서",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f8fafc",
+  "theme_color": "#3b82f6",
+  "lang": "ko",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
