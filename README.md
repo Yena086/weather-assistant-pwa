@@ -1,1 +1,1 @@
-# weather-assistant-pwa
+# 오늘의 날씨비서 PWA
